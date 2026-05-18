@@ -10,11 +10,15 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
     <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <style>
         body { margin: 0; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; overflow: hidden; background: #1a202c; }
         #sidebar { width: 320px; background: #2d3748; color: white; padding: 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: 2px 0 10px rgba(0,0,0,0.5); z-index: 1001; overflow-y: auto; }
-        #map { flex-grow: 1; }
+        #map { flex-grow: 1; position: relative; }
+        
+        /* Քարտեզի վերնագրի ոճը */
+        #mapHeaderTitle { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(45, 55, 72, 0.95); color: #63b3ed; padding: 10px 24px; border-radius: 8px; font-weight: bold; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 1000; pointer-events: none; border: 1px solid #4a5568; text-transform: uppercase; letter-spacing: 0.5px; }
         
         .tool-group { border-bottom: 1px solid #4a5568; padding-bottom: 12px; }
         h3 { margin: 0 0 8px 0; font-size: 13px; color: #63b3ed; text-transform: uppercase; }
@@ -44,22 +48,45 @@
         .leaflet-control-attribution { display: none; }
         
         .share-box { background: #1a202c; padding: 8px; border-radius: 4px; border: 1px solid #4a5568; color: #63b3ed; font-size: 11px; word-break: break-all; margin-top: 5px; user-select: all; max-height: 50px; overflow-y: auto;}
+        .user-badge { font-size: 11px; color: #38a169; margin-top: 5px; font-weight: bold; display: block; text-align: center; }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
-    <div class="tool-group">
+    <div class="tool-group" id="authGroupSection">
+        <h3>Օգտատեր (Gmail)</h3>
+        <div id="g_id_onload"
+             data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com" 
+             data-callback="handleCredentialResponse"
+             data-auto_select="false">
+        </div>
+        <div class="g_id_signin" data-type="standard" data-theme="filled_blue" data-size="large" data-width="280"></div>
+        <span id="userEmailBadge" class="user-badge" style="display:none;">🔒 Հյուրի ռեժիմ</span>
+    </div>
+
+    <div class="tool-group" id="titleGroupSection">
+        <h3>Քարտեզի Վերնագիր</h3>
+        <input type="text" id="mapTitleInput" placeholder="Մուտքագրեք քարտեզի անունը..." value="ՀՀ Միասնական Քարտեզ" oninput="updateLiveTitle(this.value)">
+    </div>
+
+    <div class="tool-group" id="myMapsGroupSection">
+        <h3>Իմ Քարտեզները</h3>
+        <button class="btn-success" style="background: #3182ce;" onclick="createNewMap()">➕ Ստեղծել նոր քարտեզ</button>
+        <div id="myMapsList" style="margin-top: 8px; max-height: 140px; overflow-y: auto;"></div>
+    </div>
+
+    <div class="tool-group" id="shareGroupSection">
         <h3>Անհատական Հղում</h3>
         <button class="btn-success" onclick="saveMapToURL()">💾 Պահպանել քարտեզը և ստանալ հղում</button>
         <div id="shareLinkContainer" style="display:none;">
             <div style="font-size:11px; margin-top:5px; color:#a0aec0;">Ձեր քարտեզի անհատական հղումը.</div>
             <div id="shareLinkBox" class="share-box"></div>
         </div>
-        <button class="btn-danger" style="margin-top: 8px;" onclick="if(confirm('Ջնջե՞լ ամբողջը:')) { window.location.hash=''; location.reload(); }">Մաքրել ամբողջ քարտեզը</button>
+        <button class="btn-danger" id="clearAllBtn" style="margin-top: 8px;" onclick="if(confirm('Ջնջե՞լ ամբողջը:')) { window.location.hash=''; location.reload(); }">Մաքրել ամբողջ քարտեզը</button>
     </div>
 
-    <div class="tool-group">
+    <div class="tool-group" id="mineralGroupSection">
         <h3>Ընտրել Հանքատեսակը</h3>
         <select id="mineralSelector" onchange="handleMineralChange()">
             <option value="">-- Ընտրել հանքատեսակ --</option>
@@ -84,7 +111,7 @@
         </select>
     </div>
 
-    <div class="tool-group">
+    <div class="tool-group" id="animalGroupSection">
         <h3>Ընտրել Կենդանատեսակը</h3>
         <select id="animalSelector" onchange="handleAnimalChange()">
             <option value="">-- Ընտրել կենդանատեսակ --</option>
@@ -101,7 +128,7 @@
                 <option value="Եղնիկ" data-icon="https://img.icons8.com/?size=100&id=BmcjEXJZDAyw&format=png&color=000000" data-desc="Նուրբ ու գեղեցիկ սլացիկ կենդանի, որը չունի ձիու կոպիտ տեսք։">🦌 Եղնիկ</option>
                 <option value="Այծյամ" data-icon="https://img.icons8.com/?size=100&id=7xftIHyu7XB7&format=png&color=000000" data-desc="Նրբագեղ ու փոքրիկ կենդանի՝ բնորոշ սուր ուղղահայաց կոտոշներով։">🦌 Այծյամ</option>
                 <option value="Բեզոարյան այծ" data-icon="https://img.icons8.com/?size=100&id=VMyrXO7oHnA3&format=png&color=000000" data-desc="Լեռնային սլացիկ կենդանի՝ դեպի վեր ու ետ ձգվող հսկայական մուգ եղջյուրներով։">🐐 Բեզոարյան այծ</option>
-                <option value="Հայկական մուֆլոն" data-icon="https://img.icons8.com/?size=100&id=AyOrOhZKt2Qa&format=png&color=000000" data-desc="Մեր լեռնային վայրի խոյը՝ խոշոր պտտված եղջյուրներով, մուգ երանգով և առանց ընտանի ոչխարի բրդի։">🐏 Հայկական մուֆլոն</option>
+                <option value="Հայկական մուֆլոն" data-icon="https://img.icons8.com/color/48/ram.png" data-desc="Մեր լեռնային վայրի խոյը՝ խոշոր պտտված եղջյուրներով, մուգ երանգով և առանց ընտանի ոչխարի բրդի։">🐏 Հայկական մուֆլոն</option>
                 <option value="Գորշ նապաստակ" data-icon="https://img.icons8.com/color/48/rabbit.png" data-desc="Լեռնատափաստանային արագաշարժ կենդանի։">🐇 Գորշ նապաստակ</option>
                 <option value="Սովորական ոզնի" data-icon="https://img.icons8.com/color/48/hedgehog.png" data-desc="Մեր բնության փոքրիկ կենդանիներից։">🦔 Սովորական ոզնի</option>
                 <option value="Հնդկական մացառախոզ" data-icon="https://img.icons8.com/?size=100&id=4T87wYbUhhZu&format=png&color=000000" data-desc="Մարմնի հետին մասում երկար ու սուր ասեղանման փշերով պատված խոշոր վայրի կրծող։">🦔 Հնդկական մացառախոզ</option>
@@ -128,10 +155,10 @@
                 <option value="Գառնանգղ" data-icon="https://img.icons8.com/?size=100&id=iwjGbOXkLE6i&format=png&color=000000" data-desc="Լեռնային խոշոր ու հզոր գիշատիչ թռչուն։">🦅 Գառնանգղ</option>
                 <option value="Սև ագռավ" data-icon="https://img.icons8.com/?size=100&id=yNAee9X2YN5d&format=png&color=000000" data-desc="Խելացի և մեծ թռչուն, որն ունի ամբողջությամբ փայլուն սև փետրավորում։">🐦 Սև ագռավ</option>
                 <option value="Կաչաղակ" data-icon="https://img.icons8.com/?size=100&id=7Dr26F16cB0x&format=png&color=000000" data-desc="Խելացի թռչուն՝ հստակ արտահայտված սև ու սպիտակ փետրավորմամբ։">🐦 Կաչաղակ</option>
-              <option value="Փասիան" data-icon="https://img.icons8.com/?size=100&id=124324&format=png&color=000000" data-desc="Խելացի թռչուն՝ հստակ արտահայտված սև ու սպիտակ փետրավորմամբ։">🐦 Փասիան</option>
+                <option value="Փասիան" data-icon="https://img.icons8.com/?size=100&id=124324&format=png&color=000000" data-desc="Խելացի թռչուն՝ հստակ արտահայտված սև ու սպիտակ փետրավորմամբ։">🐦 Փասիան</option>
                 <option value="Գյուղական ծիծեռնակ" data-icon="https://img.icons8.com/?size=100&id=DpZOPjHu9Ywe&format=png&color=000000" data-desc="Գարնան սլացիկ թռչնակ, որն աքի է ընկնում արագ թռիչքով։">🐦 Գյուղական ծիծեռնակ</option>
-              <option value="Արտույտ" data-icon="https://img.icons8.com/?size=100&id=pyrifOfOJV7F&format=png&color=000000" data-desc="Գարնան սլացիկ թռչնակ, որն աքի է ընկնում արագ թռիչքով։">🐦 Արտույտ</option>
-              <option value="Կռունկ" data-icon="https://img.icons8.com/?size=100&id=OZhsaydy1Z4i&format=png&color=000000" data-desc="Գարնան սլացիկ թռչնակ, որն աքի է ընկնում արագ թռիչքով։">🐦 Կռունկ</option>
+                <option value="Արտույտ" data-icon="https://img.icons8.com/?size=100&id=pyrifOfOJV7F&format=png&color=000000" data-desc="Գարնան սլացիկ թռչնակ, որն աքի է ընկնում արագ թռիչքով։">🐦 Արտույտ</option>
+                <option value="Կռունկ" data-icon="https://img.icons8.com/?size=100&id=OZhsaydy1Z4i&format=png&color=000000" data-desc="Գարնան սլացիկ թռչնակ, որն աքի է ընկնում արագ թռիչքով։">🐦 Կռունկ</option>
                 <option value="Անտառային բու" data-icon="https://img.icons8.com/color/48/owl.png" data-desc="Գիշերային կյանք վարող իսկական բու։">🦉 Անտառային բու</option>
                 <option value="Սև անգղ" data-icon="https://img.icons8.com/?size=100&id=8yNTuqy4EpaK&format=png&color=000000" data-desc="Մեր լեռներում սավառնող հսկա սև գիշատիչ թռչուն։">🦅 Սև անգղ</option>
             </optgroup>
@@ -140,17 +167,16 @@
                 <option value="Հայկական իժ" data-icon="https://img.icons8.com/?size=100&id=MaGBWR7lkIXS&format=png&color=000000" data-desc="Մեր լեռնային էնդեմիկ թունավոր օձերից, որն ունի հատուկ պահպանման կարգավիճակ։">🐍 Հայկական իժ</option>
                 <option value="Ջրային լորտու" data-icon="https://img.icons8.com/?size=100&id=OwPRfsLEUW71&format=png&color=000000">🐍 Ջրային լորտու</option>
                 <option value="Ճարպիկ մողես" data-icon="https://img.icons8.com/color/48/lizard.png">🦎 Ճարպիկ մողես</option>
-                <option 
-                          <option value="Կովկասյան Ագամա" data-icon="https://img.icons8.com/?size=100&id=80895&format=png&color=000000">🦎 Կովկասյան ագամա</option>
+                <option value="Կովկասյան Ագամա" data-icon="https://img.icons8.com/?size=100&id=80895&format=png&color=000000">🦎 Կովկասյան ագամա</option>
                 <option value="Հայկական ժայռային մողես" data-icon="https://img.icons8.com/?size=100&id=UoIYjsa9KdQ7&format=png&color=000000" data-desc="Ժայռերում բնակվող լեռնային իսկական սողուն։">🦎 Հայկական ժայռային մողես</option>
-      <option value="Միջերկրածովյան կրիա" data-icon="https://img.icons8.com/?size=100&id=101727&format=png&color=000000">🐸 Միջերկրածովյան կրիա</option>
+                <option value="Միջերկրածովյան կրիա" data-icon="https://img.icons8.com/?size=100&id=101727&format=png&color=000000">🐸 Միջերկրածովյան կրիա</option>
                 <option value="Լճագորտ" data-icon="https://img.icons8.com/?size=100&id=MDaojVg33ORG&format=png&color=000000">🐸 Լճագորտ</option>
                 <option value="Կանաչ դոդոշ" data-icon="https://img.icons8.com/color/48/frog.png" data-desc="Մեր լեռնային բնորոշ կանաչավուն երկկենցաղներից։">🐸 Կանաչ դոդոշ</option>
             </optgroup>
             <optgroup label="Ձկներ">
                 <option value="Սևանի իշխան" data-icon="https://img.icons8.com/?size=100&id=YEDY5MWbm6YU&format=png&color=000000">🐟 Սևանի իշխան</option>
                 <option value="Սիգ" data-icon="https://img.icons8.com/?size=100&id=6do4AQvs7XRg&format=png&color=000000">🐟 Սիգ</option>
-              <option value="Կարմրախայտ" data-icon="https://img.icons8.com/?size=100&id=JXqGE8xiFxiT&format=png&color=000000">🐟 Կարմրախայտ</option>
+                <option value="Կարմրախայտ" data-icon="https://img.icons8.com/?size=100&id=JXqGE8xiFxiT&format=png&color=000000">🐟 Կարմրախայտ</option>
                 <option value="Կողակ" data-icon="https://img.icons8.com/?size=100&id=45NxBOekDsBG&format=png&color=000000">🐟 Կողակ</option>
             </optgroup>
             <optgroup label="Միջատներ">
@@ -159,7 +185,7 @@
         </select>
     </div>
 
-    <div class="tool-group">
+    <div class="tool-group" id="climateGroupSection">
         <h3>Կլիմայի վերընթաց գոտիները</h3>
         <select id="climateSelector" onchange="handleClimateChange()">
             <option value="">-- Ընտրել կլիմայի տիպը --</option>
@@ -174,8 +200,8 @@
         </select>
     </div>
 
-    <div class="tool-group">
-        <h3>ՀՀ վերընթաց լանդշաֆտները</h3>
+    <div class="tool-group" id="landscapeGroupSection">
+        <h3>ՀՀ վերընթաց լանդշาֆտները</h3>
         <select id="landscapeSelector" onchange="handleLandscapeChange()">
             <option value="">-- Ընտրել լանդշաֆտի տիպը --</option>
             <option value="Կիսաանապատային և անապատային" data-icon="🏜️">🏜️ Կիսաանապատային և անապատային</option>
@@ -187,7 +213,7 @@
         </select>
     </div>
 
-    <div class="tool-group">
+    <div class="tool-group" id="colorGroupSection">
         <label style="font-size: 11px; display: block;">Մակերեսի / Նշանի գույն.</label>
         <input type="color" id="colorPicker" value="#4a5568">
     </div>
@@ -198,7 +224,9 @@
     </div>
 </div>
 
-<div id="map"></div>
+<div id="map">
+    <div id="mapHeaderTitle">ՀՀ Միասնական Քարտեզ</div>
+</div>
 
 <script>
     const map = L.map('map', { zoomSnap: 0.1 }).setView([40.18, 44.5], 8);
@@ -210,6 +238,8 @@
     const activeFilters = {};
     let highlightMode = null;  
     let highlightValue = null; 
+    let currentUserEmail = null; // Ընթացիկ մուտք գործած Gmail
+    let loadedMapAuthor = null;  // Հղումից բացված քարտեզի հեղինակը
 
     const armeniaGeoJSON = {
         "type": "Feature",
@@ -258,9 +288,150 @@
         }
     }
 
+    // Google Auth-ի պատասխանի մշակում
+    function handleCredentialResponse(response) {
+        const user = decodeJwt(response.credential);
+        currentUserEmail = user.email;
+        document.getElementById('userEmailBadge').innerText = "👤 " + currentUserEmail;
+        document.getElementById('userEmailBadge').style.display = 'block';
+        
+        checkPermissions();
+        renderMyMapsList();
+    }
+
+    // JWT տոկենի կոդազերծում (բրաուզերի ներսում)
+    function decodeJwt(token) {
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+            return '%' + ('0' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    }
+
+    function updateLiveTitle(val) {
+        document.getElementById('mapHeaderTitle').innerText = val.trim() || "ՀՀ Միասնական Քարտեզ";
+    }
+
+    // Իրավունքների ստուգում (Editor vs Viewer Mode)
+    let isDrawControlActive = true;
+    function checkPermissions() {
+        const isViewer = loadedMapAuthor && loadedMapAuthor !== "Guest" && loadedMapAuthor !== currentUserEmail;
+        
+        if (isViewer) {
+            document.getElementById('clearAllBtn').style.display = 'none';
+            document.getElementById('mineralGroupSection').style.display = 'none';
+            document.getElementById('animalGroupSection').style.display = 'none';
+            document.getElementById('climateGroupSection').style.display = 'none';
+            document.getElementById('landscapeGroupSection').style.display = 'none';
+            document.getElementById('colorGroupSection').style.display = 'none';
+            document.getElementById('titleGroupSection').style.display = 'none';
+            if (isDrawControlActive) {
+                map.removeControl(drawControl);
+                isDrawControlActive = false;
+            }
+        } else {
+            document.getElementById('clearAllBtn').style.display = 'block';
+            document.getElementById('mineralGroupSection').style.display = 'block';
+            document.getElementById('animalGroupSection').style.display = 'block';
+            document.getElementById('climateGroupSection').style.display = 'block';
+            document.getElementById('landscapeGroupSection').style.display = 'block';
+            document.getElementById('colorGroupSection').style.display = 'block';
+            document.getElementById('titleGroupSection').style.display = 'block';
+            if (!isDrawControlActive) {
+                map.addControl(drawControl);
+                isDrawControlActive = true;
+            }
+        }
+    }
+
+    // ➕ Ստեղծել նոր մաքուր քարտեզ
+    function createNewMap() {
+        if (drawnItems.getLayers().length > 0) {
+            if (confirm('Բացել նոր մաքուր քարտե՞զ։ Համոզվեք, որ պահպանել եք ընթացիկ աշխատանքը։')) {
+                window.location.hash = '';
+                location.reload();
+            }
+        } else {
+            window.location.hash = '';
+            location.reload();
+        }
+    }
+
+    // Լոկալ հիշողության մեջ քարտեզների ցուցակի պահպանում
+    function saveToLocalStorageList(title, hash) {
+        let list = JSON.parse(localStorage.getItem('hh_maps_storage')) || [];
+        const existingIndex = list.findIndex(m => m.hash === hash);
+        const activeAuthor = currentUserEmail || "Guest";
+
+        if (existingIndex > -1) {
+            list[existingIndex].title = title;
+            list[existingIndex].author = activeAuthor;
+        } else {
+            list.push({
+                title: title,
+                hash: hash,
+                author: activeAuthor
+            });
+        }
+        localStorage.setItem('hh_maps_storage', JSON.stringify(list));
+        renderMyMapsList();
+    }
+
+    // Իմ քարտեզները պանելի վիզուալիզացիա
+    function renderMyMapsList() {
+        const container = document.getElementById('myMapsList');
+        container.innerHTML = '';
+        let list = JSON.parse(localStorage.getItem('hh_maps_storage')) || [];
+        const activeAuthor = currentUserEmail || "Guest";
+        const myMaps = list.filter(m => m.author === activeAuthor);
+
+        if (myMaps.length === 0) {
+            container.innerHTML = '<div style="font-size:11px; color:#a0aec0; text-align:center; padding:5px;">Պահպանված քարտեզներ չկան</div>';
+            return;
+        }
+
+        myMaps.forEach(m => {
+            const item = document.createElement('div');
+            item.className = 'sub-item';
+            item.style.borderLeftColor = '#38a169';
+            item.style.display = 'flex';
+            item.style.justifyContent = 'space-between';
+            item.style.alignItems = 'center';
+            item.style.padding = '6px 8px';
+            
+            const titleSpan = document.createElement('span');
+            titleSpan.innerHTML = `<b>${m.title}</b>`;
+            titleSpan.style.cursor = 'pointer';
+            titleSpan.onclick = () => {
+                window.location.hash = m.hash;
+                location.reload();
+            };
+
+            const deleteBtn = document.createElement('span');
+            deleteBtn.innerHTML = '❌';
+            deleteBtn.style.cursor = 'pointer';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (confirm('Ջնջե՞լ այս քարտեզը ցուցակից:')) {
+                    let fullList = JSON.parse(localStorage.getItem('hh_maps_storage')) || [];
+                    fullList = fullList.filter(item => item.hash !== m.hash);
+                    localStorage.setItem('hh_maps_storage', JSON.stringify(fullList));
+                    if (window.location.hash.substring(1) === m.hash) {
+                        window.location.hash = '';
+                    }
+                    location.reload();
+                }
+            };
+
+            item.appendChild(titleSpan);
+            item.appendChild(deleteBtn);
+            container.appendChild(item);
+        });
+    }
+
     function getResourceOptionsHtml() {
         let html = '';
-        
         const mineralSelect = document.getElementById('mineralSelector');
         html += `<optgroup label="💎 Հանքատեսակներ">`;
         for(let i = 1; i < mineralSelect.options.length; i++) {
@@ -295,18 +466,6 @@
         return html;
     }
 
-    function encodeImageFileAsURL(element) {
-        const file = element.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = function() {
-                element.setAttribute('data-base64', reader.result);
-            }
-            reader.readAsDataURL(file);
-        }
-    }
-
-    // ՓՈՓՈԽՈՒԹՅՈՒՆ․ Պայմանական նշանները մեծացվել են քարտեզի վրա և հաշվի են առնում խմբային հայլայթը
     function updateSingleMarkerIcon(layer) {
         if (!(layer instanceof L.Marker)) return;
         const currentZoom = map.getZoom();
@@ -370,7 +529,6 @@
         });
     });
 
-    // ՓՈՓՈԽՈՒԹՅՈՒՆ․ Այժմ հայլայթը կատարվում է ըստ ընդհանուր վերնագրի (title) խմբի՝ կետերի և մակերեսների համար
     function activateHighlight(mode, value) {
         highlightMode = mode;
         highlightValue = value;
@@ -432,13 +590,15 @@
     function attachLayerClickEvent(layer) {
         const id = drawnItems.getLayerId(layer);
 
-        // Ձախ քլիքի իրադարձություն
         layer.on('click', function(e) {
             activateHighlight('id', id);
         });
 
-        // Աջ քլիքի իրադարձություն (contextmenu)
         layer.on('contextmenu', function(e) {
+            // Արգելում ենք խմբագրումը, եթե դիտորդ է
+            const isViewer = loadedMapAuthor && loadedMapAuthor !== "Guest" && loadedMapAuthor !== currentUserEmail;
+            if (isViewer) return;
+
             if (e && e.originalEvent) {
                 L.DomEvent.stopPropagation(e);
                 e.originalEvent.preventDefault(); 
@@ -492,8 +652,8 @@
         setTimeout(() => { layer.openPopup(); }, 20);
     }
 
-    // ՓՈՓՈԽՈՒԹՅՈՒՆ․ Պահպանելիս անմիջապես փակվում է
     function saveLayerData(e, id) {
+        map.closePopup(); 
         if (e) {
             L.DomEvent.stopPropagation(e);
             e.preventDefault();
@@ -510,7 +670,6 @@
         const color = popupContent.querySelector('#edit-color').value;
         const base64Image = popupContent.querySelector('#edit-image').getAttribute('data-base64');
 
-        map.closePopup(); 
         map.options.closePopupOnClick = true; 
 
         const selectedOption = resourceTypeDropdown.options[resourceTypeDropdown.selectedIndex];
@@ -548,8 +707,8 @@
         }, 50);
     }
 
-    // ՓՈՓՈԽՈՒԹՅՈՒՆ․ Չեղարկելիս անմիջապես փակվում է
     function cancelLayerData(e, id) {
+        map.closePopup(); 
         if (e) {
             L.DomEvent.stopPropagation(e);
             e.preventDefault();
@@ -557,7 +716,6 @@
 
         const layer = drawnItems.getLayer(id);
         if (layer) {
-            map.closePopup(); 
             map.options.closePopupOnClick = true; 
             setTimeout(() => {
                 updatePopup(layer);
@@ -600,18 +758,25 @@
         let descriptionHtml = layer.options.description ? 
             `<span style="font-size:12px; color:#555; max-height:80px; overflow-y:auto; display:block; margin-bottom:4px;">${layer.options.description}</span>` : '';
 
+        // ՓՈՓՈԽՈՒԹՅՈՒՆ․ Եթե դիտորդ է, Popup-ից թաքցնում ենք Խմբագրել/Ջնջել կոճակները
+        const isViewer = loadedMapAuthor && loadedMapAuthor !== "Guest" && loadedMapAuthor !== currentUserEmail;
+        let actionButtonsHtml = '';
+        if (!isViewer) {
+            actionButtonsHtml = `
+                <div style="display: flex; gap: 5px; margin-top: 5px;">
+                    <button class="btn-edit-popup" style="color: white; background: #3182ce; flex-grow: 1; margin-top:0;" onclick="editLayerData(${id})">Խմբագրել</button>
+                    <button class="btn-edit-popup" style="color: white; background: #e53e3e; flex-grow: 1; margin-top:0;" onclick="deleteLayerData(${id})">Ջնջել</button>
+                </div>`;
+        }
+
         content.innerHTML = `
             ${headerHtml} ${imageHtml} ${descriptionHtml}
-            <div style="display: flex; gap: 5px; margin-top: 5px;">
-                <button class="btn-edit-popup" style="color: white; background: #3182ce; flex-grow: 1; margin-top:0;" onclick="editLayerData(${id})">Խմբագրել</button>
-                <button class="btn-edit-popup" style="color: white; background: #e53e3e; flex-grow: 1; margin-top:0;" onclick="deleteLayerData(${id})">Ջնջել</button>
-            </div>
+            ${actionButtonsHtml}
         `;
         
         layer.bindPopup(content, { closeButton: true, autoClose: true });
     }
 
-    // ՓՈՓՈԽՈՒԹՅՈՒՆ․ Ձախակողմյան ցանկից ամբողջությամբ հեռացվել է քանակայինbadge-ը (Գայլ (3) -> Գայլ)
     function updateLegend() {
         const list = document.getElementById('legend-list');
         list.innerHTML = '';
@@ -672,7 +837,6 @@
                 subItem.setAttribute('data-title', title);
                 subItem.style.borderLeftColor = layersArray[0].options.color || '#3498db';
                 
-                // ՈՒՂՂՈՒՄ․ Ցուցադրվում է միայն անվանումը՝ առանց քանակի
                 subItem.innerHTML = `<b>${title}</b>`;
                 
                 if (highlightMode !== null && title === matchTitle) {
@@ -713,6 +877,7 @@
         resetHighlight();
     }
 
+    // ՓՈՓՈԽՈՒԹՅՈՒՆ․ Հղման մեջ ներառվում է նաև Վերնագիրն ու Հեղինակի Gmail-ը
     function saveMapToURL() {
         const dataToSave = [];
         drawnItems.eachLayer(layer => {
@@ -729,22 +894,52 @@
             dataToSave.push(geojson);
         });
 
-        const jsonStr = JSON.stringify(dataToSave);
+        const title = document.getElementById('mapTitleInput').value.trim() || "ՀՀ Միասնական Քարտեզ";
+        
+        const packet = {
+            title: title,
+            author: currentUserEmail || "Guest",
+            features: dataToSave
+        };
+
+        const jsonStr = JSON.stringify(packet);
         const encodedData = btoa(unescape(encodeURIComponent(jsonStr))); 
         window.location.hash = encodedData;
 
         const fullURL = window.location.href;
         document.getElementById('shareLinkBox').innerText = fullURL;
         document.getElementById('shareLinkContainer').style.display = 'block';
+
+        // Պահպանում ենք ցուցակի մեջ
+        saveToLocalStorageList(title, encodedData);
     }
 
+    // ՓՈՓՈԽՈՒԹՅՈՒՆ․ Կարդում է նոր փաթեթային (Packet) կառուցվածքը
     function loadMapFromURL() {
         const hash = window.location.hash.substring(1);
-        if (!hash) return;
+        if (!hash) {
+            renderMyMapsList();
+            return;
+        }
 
         try {
             const decodedStr = decodeURIComponent(escape(atob(hash)));
-            const geojsonArray = JSON.parse(decodedStr);
+            const parsed = JSON.parse(decodedStr);
+            
+            let geojsonArray = [];
+            let mapTitle = "ՀՀ Միասնական Քարտեզ";
+
+            if (parsed && parsed.features) {
+                geojsonArray = parsed.features;
+                mapTitle = parsed.title || "ՀՀ Միասնական Քարտեզ";
+                loadedMapAuthor = parsed.author || "Guest";
+            } else if (Array.isArray(parsed)) {
+                geojsonArray = parsed;
+                loadedMapAuthor = "Guest";
+            }
+
+            document.getElementById('mapTitleInput').value = mapTitle;
+            updateLiveTitle(mapTitle);
 
             geojsonArray.forEach(item => {
                 L.geoJSON(item, {
@@ -776,6 +971,8 @@
                 });
             });
             updateLegend();
+            checkPermissions();
+            renderMyMapsList();
         } catch (e) {
             console.error("Հղումից տվյալների վերականգնման սխալ:", e);
         }
