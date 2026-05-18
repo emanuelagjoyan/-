@@ -78,7 +78,7 @@
 
     <div class="tool-group" id="shareGroupSection">
         <h3>Անհատական Հղում</h3>
-        <button class="btn-success" onclick="saveMapToURL()">💾 Պահպանել քարտեզը և ստանալ հղում</button>
+        <button class="btn-success" id="saveMapBtn" onclick="saveMapToURL()">💾 Պահպանել քարտեզը և ստանալ հղում</button>
         <div id="shareLinkContainer" style="display:none;">
             <div style="font-size:11px; margin-top:5px; color:#a0aec0;">Ձեր քարտեզի անհատական հղումը.</div>
             <div id="shareLinkBox" class="share-box"></div>
@@ -139,7 +139,7 @@
                 <option value="Գորշուկ" data-icon="https://img.icons8.com/?size=100&id=iCy0OAdWE5J2&format=png&color=000000" data-img="https://i.postimg.cc/Ss2X1b1j/gorsuk.png" data-desc="Ուժեղ թաթերով ստորգետնյա խորը բներ փորող ամենակեր կենդանի։">🦡 Գորշուկ</option>
                 <option value="Աքիս" data-icon="https://img.icons8.com/?size=100&id=JOGeIaOU32xY&format=png&color=000000" data-desc="Մեր ամենափոքր, ճարպիկ, դեղնանարնջագույն երանգով արագաշարժ գիշատիչը։">🦦 Աքիս</option>
                 <option value="Կզաքիս" data-icon="https://img.icons8.com/?size=100&id=wp16sE8oqX4F&format=png&color=000000" data-desc="Ծառամագլցող ճարպիկ, մուգ ու սլացիկ կատվանման կենդանի։">🦦 Կզաքիս</option>
-                <option value="Ժանտաքիս" data-icon="https://img.icons8.com/?size=100&id=xJwnS1yJmpBi&format=png&color=000000" data-desc="Գիշերային փոքրիկ վայրի կենդանի, որը վտանգի դեպքում արտազատում է խիստ տհաճ հոտ։">🦨 Ժանտաքիս</option>
+                <option value="Ժանտաքիս" data-icon="https://img.icons8.com/?size=100&id=xJwnS1yJmpBi&format=png&color=000000" data-desc="Գիշերային փոքրիկ վայրի կենդանի, որը վտանգի դեպքում արտազատում է խիստ տհาճ հոտ։">🦨 Ժանտաքիս</option>
                 <option value="Ջրասամույր" data-icon="https://img.icons8.com/?size=100&id=WQRTPfEIVmr4&format=png&color=000000" data-desc="Գետնասամույրների ընտանիքին պատկանող մուգ դարչնագույն կաթնասուն։">🦦 Ջրասամույր</option>
                 <option value="Չղջիկներ" data-icon="https://img.icons8.com/color/48/bat.png">🦇 Չղջիկներ</option>
             </optgroup>
@@ -313,36 +313,62 @@
         document.getElementById('mapHeaderTitle').innerText = val.trim() || "ՀՀ Միասնական Քարտեզ";
     }
 
-    // Իրավունքների ստուգում (Editor vs Viewer Mode)
+    // Իրավունքների և հեղինակայնության ստուգում (Strict Permissions)
     let isDrawControlActive = true;
     function checkPermissions() {
-        const isViewer = loadedMapAuthor && loadedMapAuthor !== "Guest" && loadedMapAuthor !== currentUserEmail;
+        // Խմբագրման իրավունք կա ՄԻԱՅՆ եթե օգտատերը մուտք է գործել AND (քարտեզը չունի հեղինակ/հին հյուր է OR ընթացիկ օգտատերն է հեղինակը)
+        const isEditable = currentUserEmail && (!loadedMapAuthor || loadedMapAuthor === "Guest" || loadedMapAuthor === currentUserEmail);
         
-        if (isViewer) {
-            document.getElementById('clearAllBtn').style.display = 'none';
-            document.getElementById('mineralGroupSection').style.display = 'none';
-            document.getElementById('animalGroupSection').style.display = 'none';
-            document.getElementById('climateGroupSection').style.display = 'none';
-            document.getElementById('landscapeGroupSection').style.display = 'none';
-            document.getElementById('colorGroupSection').style.display = 'none';
-            document.getElementById('titleGroupSection').style.display = 'none';
+        // Կառավարում ենք Leaflet Draw գործիքների տեսանելիությունը
+        if (!isEditable) {
             if (isDrawControlActive) {
                 map.removeControl(drawControl);
                 isDrawControlActive = false;
             }
         } else {
-            document.getElementById('clearAllBtn').style.display = 'block';
-            document.getElementById('mineralGroupSection').style.display = 'block';
-            document.getElementById('animalGroupSection').style.display = 'block';
-            document.getElementById('climateGroupSection').style.display = 'block';
-            document.getElementById('landscapeGroupSection').style.display = 'block';
-            document.getElementById('colorGroupSection').style.display = 'block';
-            document.getElementById('titleGroupSection').style.display = 'block';
             if (!isDrawControlActive) {
                 map.addControl(drawControl);
                 isDrawControlActive = true;
             }
         }
+
+        // Կառավարում ենք սայդբարի տարրերի տեսանելիությունը ըստ ավտորիզացիայի վիճակի
+        if (!currentUserEmail) {
+            // ԱՌԱՆՑ ՄՈՒՏՔ ԳՈՐԾԵԼՈՒ -> Թաքցնել ամբողջը, բացի Լեգենդից և Վերնագրից (Դիտորդի մաքուր ռեժիմ)
+            document.getElementById('titleGroupSection').style.display = 'none';
+            document.getElementById('myMapsGroupSection').style.display = 'none';
+            document.getElementById('shareGroupSection').style.display = 'none';
+            document.getElementById('mineralGroupSection').style.display = 'none';
+            document.getElementById('animalGroupSection').style.display = 'none';
+            document.getElementById('climateGroupSection').style.display = 'none';
+            document.getElementById('landscapeGroupSection').style.display = 'none';
+            document.getElementById('colorGroupSection').style.display = 'none';
+        } else if (!isEditable) {
+            // ՄՈՒՏՔ ԳՈՐԾԱԾ Է, ԲԱՅՑ ՈՒՐԻՇԻ ՔԱՐՏԵԶՆ Է -> Թույլ տալ տեսնել միայն սեփական ցուցակը, թաքցնել ընտրացանկերն ու սեյվը
+            document.getElementById('titleGroupSection').style.display = 'none';
+            document.getElementById('myMapsGroupSection').style.display = 'block'; 
+            document.getElementById('shareGroupSection').style.display = 'none'; 
+            document.getElementById('mineralGroupSection').style.display = 'none';
+            document.getElementById('animalGroupSection').style.display = 'none';
+            document.getElementById('climateGroupSection').style.display = 'none';
+            document.getElementById('landscapeGroupSection').style.display = 'none';
+            document.getElementById('colorGroupSection').style.display = 'none';
+        } else {
+            // ԼԻԱՐԺԵՔ ՀԵՂԻՆԱԿ -> Ցուցադրել բոլոր գործիքներն ու դաշտերը
+            document.getElementById('titleGroupSection').style.display = 'block';
+            document.getElementById('myMapsGroupSection').style.display = 'block';
+            document.getElementById('shareGroupSection').style.display = 'block';
+            document.getElementById('mineralGroupSection').style.display = 'block';
+            document.getElementById('animalGroupSection').style.display = 'block';
+            document.getElementById('climateGroupSection').style.display = 'block';
+            document.getElementById('landscapeGroupSection').style.display = 'block';
+            document.getElementById('colorGroupSection').style.display = 'block';
+        }
+
+        // Թարմացնում ենք քարտեզի բոլոր օբյեկտների Popup-ների ներքին վիճակը
+        drawnItems.eachLayer(layer => {
+            updatePopup(layer);
+        });
     }
 
     // ➕ Ստեղծել նոր մաքուր քարտեզ
@@ -590,13 +616,16 @@
     function attachLayerClickEvent(layer) {
         const id = drawnItems.getLayerId(layer);
 
+        // Ձախ քլիքի իրադարձություն
         layer.on('click', function(e) {
             activateHighlight('id', id);
         });
 
+        // Աջ քլիքի իրադարձություն (contextmenu)
         layer.on('contextmenu', function(e) {
-            const isViewer = loadedMapAuthor && loadedMapAuthor !== "Guest" && loadedMapAuthor !== currentUserEmail;
-            if (isViewer) return;
+            // Արգելում ենք խմբագրումը, եթե օգտատերը չունի լիազորություն (հյուր է կամ ուրիշի քարտեզն է)
+            const isEditable = currentUserEmail && (!loadedMapAuthor || loadedMapAuthor === "Guest" || loadedMapAuthor === currentUserEmail);
+            if (!isEditable) return;
 
             if (e && e.originalEvent) {
                 L.DomEvent.stopPropagation(e);
@@ -757,9 +786,10 @@
         let descriptionHtml = layer.options.description ? 
             `<span style="font-size:12px; color:#555; max-height:80px; overflow-y:auto; display:block; margin-bottom:4px;">${layer.options.description}</span>` : '';
 
-        const isViewer = loadedMapAuthor && loadedMapAuthor !== "Guest" && loadedMapAuthor !== currentUserEmail;
+        // Խմբագրման իրավունքի ստուգում Popup-ի կոճակների համար
+        const isEditable = currentUserEmail && (!loadedMapAuthor || loadedMapAuthor === "Guest" || loadedMapAuthor === currentUserEmail);
         let actionButtonsHtml = '';
-        if (!isViewer) {
+        if (isEditable) {
             actionButtonsHtml = `
                 <div style="display: flex; gap: 5px; margin-top: 5px;">
                     <button class="btn-edit-popup" style="color: white; background: #3182ce; flex-grow: 1; margin-top:0;" onclick="editLayerData(${id})">Խմբագրել</button>
@@ -913,6 +943,7 @@
     function loadMapFromURL() {
         const hash = window.location.hash.substring(1);
         if (!hash) {
+            checkPermissions(); // Կարգավորում է սկզբնական վիճակը առանց լոգինի
             renderMyMapsList();
             return;
         }
@@ -980,7 +1011,7 @@
             rectangle: true, marker: true, polyline: true, circle: false, circlemarker: false 
         }
     });
-    map.addControl(drawControl);
+    // Գործիքի սկզբնական ավելացումը կառավարվում է checkPermissions-ով
 
     map.on(L.Draw.Event.CREATED, function (e) {
         let layer = e.layer;
