@@ -57,7 +57,7 @@
     <div class="tool-group" id="authGroupSection">
         <h3>Օգտատեր (Gmail)</h3>
         <div id="g_id_onload"
-             data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com" 
+             data-client_id="325789692189-m2939jjhcqnagdmg3t8vjcambrl9r3pf.apps.googleusercontent.com" 
              data-callback="handleCredentialResponse"
              data-auto_select="false">
         </div>
@@ -128,7 +128,7 @@
                 <option value="Եղնիկ" data-icon="https://img.icons8.com/?size=100&id=BmcjEXJZDAyw&format=png&color=000000" data-desc="Նուրբ ու գեղեցիկ սլացիկ կենդանի, որը չունի ձիու կոպիտ տեսք։">🦌 Եղնիկ</option>
                 <option value="Այծյամ" data-icon="https://img.icons8.com/?size=100&id=7xftIHyu7XB7&format=png&color=000000" data-desc="Նրբագեղ ու փոքրիկ կենդանի՝ բնորոշ սուր ուղղահայաց կոտոշներով։">🦌 Այծյամ</option>
                 <option value="Բեզոարյան այծ" data-icon="https://img.icons8.com/?size=100&id=VMyrXO7oHnA3&format=png&color=000000" data-desc="Լեռնային սլացիկ կենդանի՝ դեպի վեր ու ետ ձգվող հսկայական մուգ եղջյուրներով։">🐐 Բեզոարյան այծ</option>
-                <option value="Հայկական մուֆլոն" data-icon="https://img.icons8.com/color/48/ram.png" data-desc="Մեր լեռնային վայրի խոյը՝ խոշոր պտտված եղջյուրներով, մուգ երանգով և առանց ընտանի ոչխարի բրդի։">🐏 Հայկական մուֆլոն</option>
+                <option value="Հայկական մուֆլոն" data-icon="https://img.icons8.com/?size=100&id=AyOrOhZKt2Qa&format=png&color=000000" data-desc="Մեր լեռնային վայրի խոյը՝ խոշոր պտտված եղջյուրներով, մուգ երանգով և առանց ընտանի ոչխարի բրդի։">🐏 Հայկական մուֆլոն</option>
                 <option value="Գորշ նապաստակ" data-icon="https://img.icons8.com/color/48/rabbit.png" data-desc="Լեռնատափաստանային արագաշարժ կենդանի։">🐇 Գորշ նապաստակ</option>
                 <option value="Սովորական ոզնի" data-icon="https://img.icons8.com/color/48/hedgehog.png" data-desc="Մեր բնության փոքրիկ կենդանիներից։">🦔 Սովորական ոզնի</option>
                 <option value="Հնդկական մացառախոզ" data-icon="https://img.icons8.com/?size=100&id=4T87wYbUhhZu&format=png&color=000000" data-desc="Մարմնի հետին մասում երկար ու սուր ասեղանման փշերով պատված խոշոր վայրի կրծող։">🦔 Հնդկական մացառախոզ</option>
@@ -201,7 +201,7 @@
     </div>
 
     <div class="tool-group" id="landscapeGroupSection">
-        <h3>ՀՀ վերընթաց լանդշาֆտները</h3>
+        <h3>ՀՀ վերընթաց լանդշաֆտները</h3>
         <select id="landscapeSelector" onchange="handleLandscapeChange()">
             <option value="">-- Ընտրել լանդշաֆտի տիպը --</option>
             <option value="Կիսաանապատային և անապատային" data-icon="🏜️">🏜️ Կիսաանապատային և անապատային</option>
@@ -595,7 +595,6 @@
         });
 
         layer.on('contextmenu', function(e) {
-            // Արգելում ենք խմբագրումը, եթե դիտորդ է
             const isViewer = loadedMapAuthor && loadedMapAuthor !== "Guest" && loadedMapAuthor !== currentUserEmail;
             if (isViewer) return;
 
@@ -653,7 +652,6 @@
     }
 
     function saveLayerData(e, id) {
-        map.closePopup(); 
         if (e) {
             L.DomEvent.stopPropagation(e);
             e.preventDefault();
@@ -670,6 +668,7 @@
         const color = popupContent.querySelector('#edit-color').value;
         const base64Image = popupContent.querySelector('#edit-image').getAttribute('data-base64');
 
+        map.closePopup(); 
         map.options.closePopupOnClick = true; 
 
         const selectedOption = resourceTypeDropdown.options[resourceTypeDropdown.selectedIndex];
@@ -708,7 +707,6 @@
     }
 
     function cancelLayerData(e, id) {
-        map.closePopup(); 
         if (e) {
             L.DomEvent.stopPropagation(e);
             e.preventDefault();
@@ -716,6 +714,7 @@
 
         const layer = drawnItems.getLayer(id);
         if (layer) {
+            map.closePopup(); 
             map.options.closePopupOnClick = true; 
             setTimeout(() => {
                 updatePopup(layer);
@@ -758,7 +757,6 @@
         let descriptionHtml = layer.options.description ? 
             `<span style="font-size:12px; color:#555; max-height:80px; overflow-y:auto; display:block; margin-bottom:4px;">${layer.options.description}</span>` : '';
 
-        // ՓՈՓՈԽՈՒԹՅՈՒՆ․ Եթե դիտորդ է, Popup-ից թաքցնում ենք Խմբագրել/Ջնջել կոճակները
         const isViewer = loadedMapAuthor && loadedMapAuthor !== "Guest" && loadedMapAuthor !== currentUserEmail;
         let actionButtonsHtml = '';
         if (!isViewer) {
@@ -877,7 +875,6 @@
         resetHighlight();
     }
 
-    // ՓՈՓՈԽՈՒԹՅՈՒՆ․ Հղման մեջ ներառվում է նաև Վերնագիրն ու Հեղինակի Gmail-ը
     function saveMapToURL() {
         const dataToSave = [];
         drawnItems.eachLayer(layer => {
@@ -910,11 +907,9 @@
         document.getElementById('shareLinkBox').innerText = fullURL;
         document.getElementById('shareLinkContainer').style.display = 'block';
 
-        // Պահպանում ենք ցուցակի մեջ
         saveToLocalStorageList(title, encodedData);
     }
 
-    // ՓՈՓՈԽՈՒԹՅՈՒՆ․ Կարդում է նոր փաթեթային (Packet) կառուցվածքը
     function loadMapFromURL() {
         const hash = window.location.hash.substring(1);
         if (!hash) {
