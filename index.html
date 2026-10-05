@@ -5,20 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ՀՀ Ռեսուրսների, Լանդշաֆտների և Կլիմայի Միասնական Քարտեզ</title>
     
+    <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Leaflet Draw CSS & JS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    
+    <!-- Turf.js -->
     <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+    
+    <!-- Google Sign-In SDK -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <style>
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; overflow: hidden; background: #1a202c; }
-        #sidebar { width: 320px; background: #2d3748; color: white; padding: 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: 2px 0 10px rgba(0,0,0,0.5); z-index: 1001; overflow-y: auto; }
-        #map { flex-grow: 1; position: relative; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Segoe UI', sans-serif; overflow: hidden; background: #1a202c; }
+        body { display: flex; }
+        
+        #sidebar { 
+            width: 320px; 
+            min-width: 320px;
+            height: 100vh;
+            background: #2d3748; 
+            color: white; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+            box-shadow: 2px 0 10px rgba(0,0,0,0.5); 
+            z-index: 1001; 
+            overflow-y: auto; 
+        }
+        
+        #map { 
+            flex-grow: 1; 
+            height: 100vh;
+            width: 100%;
+            position: relative; 
+            background: #e2e8f0;
+        }
         
         /* Քարտեզի վերնագրի ոճը */
-        #mapHeaderTitle { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(45, 55, 72, 0.95); color: #63b3ed; padding: 10px 24px; border-radius: 8px; font-weight: bold; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 1000; pointer-events: none; border: 1px solid #4a5568; text-transform: uppercase; letter-spacing: 0.5px; }
+        #mapHeaderTitle { 
+            position: absolute; 
+            top: 15px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: rgba(45, 55, 72, 0.95); 
+            color: #63b3ed; 
+            padding: 10px 24px; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            font-size: 15px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4); 
+            z-index: 1000; 
+            pointer-events: none; 
+            border: 1px solid #4a5568; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px; 
+        }
         
         .tool-group { border-bottom: 1px solid #4a5568; padding-bottom: 12px; }
         h3 { margin: 0 0 8px 0; font-size: 13px; color: #63b3ed; text-transform: uppercase; }
@@ -132,14 +179,14 @@
                 <option value="Գորշ նապաստակ" data-icon="https://img.icons8.com/color/48/rabbit.png" data-desc="Լեռնատափաստանային արագաշարժ կենդանի։">🐇 Գորշ նապաստակ</option>
                 <option value="Սովորական ոզնի" data-icon="https://img.icons8.com/color/48/hedgehog.png" data-desc="Մեր բնության փոքրիկ կենդանիներից։">🦔 Սովորական ոզնի</option>
                 <option value="Հնդկական մացառախոզ" data-icon="https://img.icons8.com/?size=100&id=4T87wYbUhhZu&format=png&color=000000" data-desc="Մարմնի հետին մասում երկար ու սուր ասեղանման փշերով պատված խոշոր վայրի կրծող։">🦔 Հնդկական մացառախոզ</option>
-                <option value="Ճագարամուկ" data-icon="https://img.icons8.com/?size=100&id=gu7Rg1hRoW6f&format=png&color=000000" data-desc="Եկար ականջներով ու հետին ոտքերով ցատկող մկնակերպ կրծող։">🐭 Ճագարամուկ</option>
+                <option value="Ճագարամուկ" data-icon="https://img.icons8.com/?size=100&id=gu7Rg1hRoW6f&format=png&color=000000" data-desc="Երկար ականջներով ու հետին ոտքերով ցատկող մկնակերպ կրծող։">🐭 Ճագարամուկ</option>
                 <option value="Դաշտամուկ" data-icon="https://img.icons8.com/?size=100&id=95005&format=png&color=000000" data-desc="Փոքրիկ դաշտային կրծող, որը բնակվում է բաց մարգագետիններում։">🐭 Դաշտամուկ</option>
                 <option value="Կովկասյան սկյուռ" data-icon="https://img.icons8.com/color/48/squirrel.png">🐿️ Կովկասյան սկյուռ</option>
                 <option value="Խլուրդ" data-icon="https://img.icons8.com/color/48/beaver.png" data-desc="Ստորգետնյա կյանք վարող, մուգ գույնի փորող իսկական կենդանի։">🐾 Խլուրդ</option>
                 <option value="Գորշուկ" data-icon="https://img.icons8.com/?size=100&id=iCy0OAdWE5J2&format=png&color=000000" data-img="https://i.postimg.cc/Ss2X1b1j/gorsuk.png" data-desc="Ուժեղ թաթերով ստորգետնյա խորը բներ փորող ամենակեր կենդանի։">🦡 Գորշուկ</option>
                 <option value="Աքիս" data-icon="https://img.icons8.com/?size=100&id=JOGeIaOU32xY&format=png&color=000000" data-desc="Մեր ամենափոքր, ճարպիկ, դեղնանարնջագույն երանգով արագաշարժ գիշատիչը։">🦦 Աքիս</option>
                 <option value="Կզաքիս" data-icon="https://img.icons8.com/?size=100&id=wp16sE8oqX4F&format=png&color=000000" data-desc="Ծառամագլցող ճարպիկ, մուգ ու սլացիկ կատվանման կենդանի։">🦦 Կզաքիս</option>
-                <option value="Ժանտաքիս" data-icon="https://img.icons8.com/?size=100&id=xJwnS1yJmpBi&format=png&color=000000" data-desc="Գիշերային փոքրիկ վայրի կենդանի, որը վտանգի դեպքում արտազատում է խիստ տհาճ հոտ։">🦨 Ժանտաքիս</option>
+                <option value="Ժանտաքիս" data-icon="https://img.icons8.com/?size=100&id=xJwnS1yJmpBi&format=png&color=000000" data-desc="Գիշերային փոքրիկ վայրի կենդանի, որը վտանգի դեպքում արտազատում է խիստ տհաճ հոտ։">🦨 Ժանտաքիս</option>
                 <option value="Ջրասամույր" data-icon="https://img.icons8.com/?size=100&id=WQRTPfEIVmr4&format=png&color=000000" data-desc="Գետնասամույրների ընտանիքին պատկանող մուգ դարչնագույն կաթնասուն։">🦦 Ջրասամույր</option>
                 <option value="Չղջիկներ" data-icon="https://img.icons8.com/color/48/bat.png">🦇 Չղջիկներ</option>
             </optgroup>
@@ -156,9 +203,9 @@
                 <option value="Սև ագռավ" data-icon="https://img.icons8.com/?size=100&id=yNAee9X2YN5d&format=png&color=000000" data-desc="Խելացի և մեծ թռչուն, որն ունի ամբողջությամբ փայլուն սև փետրավորում։">🐦 Սև ագռավ</option>
                 <option value="Կաչաղակ" data-icon="https://img.icons8.com/?size=100&id=7Dr26F16cB0x&format=png&color=000000" data-desc="Խելացի թռչուն՝ հստակ արտահայտված սև ու սպիտակ փետրավորմամբ։">🐦 Կաչաղակ</option>
                 <option value="Փասիան" data-icon="https://img.icons8.com/?size=100&id=124324&format=png&color=000000" data-desc="Խելացի թռչուն՝ հստակ արտահայտված սև ու սպիտակ փետրավորմամբ։">🐦 Փասիան</option>
-                <option value="Գյուղական ծիծեռնակ" data-icon="https://img.icons8.com/?size=100&id=DpZOPjHu9Ywe&format=png&color=000000" data-desc="Գարնան սլացիկ թռչնակ, որն աքի է ընկնում արագ թռիչքով։">🐦 Գյուղական ծիծեռնակ</option>
-                <option value="Արտույտ" data-icon="https://img.icons8.com/?size=100&id=pyrifOfOJV7F&format=png&color=000000" data-desc="Գարնան սլացիկ թռչնակ, որն աքի է ընկնում արագ թռիչքով։">🐦 Արտույտ</option>
-                <option value="Կռունկ" data-icon="https://img.icons8.com/?size=100&id=OZhsaydy1Z4i&format=png&color=000000" data-desc="Գարնան սլացիկ թռչնակ, որն աքի է ընկնում արագ թռիչքով։">🐦 Կռունկ</option>
+                <option value="Գյուղական ծիծեռնակ" data-icon="https://img.icons8.com/?size=100&id=DpZOPjHu9Ywe&format=png&color=000000" data-desc="Գարնան սլացիկ թռչնակ, որն աչքի է ընկնում արագ թռիչքով։">🐦 Գյուղական ծիծեռնակ</option>
+                <option value="Արտույտ" data-icon="https://img.icons8.com/?size=100&id=pyrifOfOJV7F&format=png&color=000000" data-desc="Գարնան սլացիկ թռչնակ, որն աչքի է ընկնում արագ թռիչքով։">🐦 Արտույտ</option>
+                <option value="Կռունկ" data-icon="https://img.icons8.com/?size=100&id=OZhsaydy1Z4i&format=png&color=000000" data-desc="Գարնան սլացիկ թռչնակ, որն աչքի է ընկնում արագ թռիչքով։">🐦 Կռունկ</option>
                 <option value="Անտառային բու" data-icon="https://img.icons8.com/color/48/owl.png" data-desc="Գիշերային կյանք վարող իսկական բու։">🦉 Անտառային բու</option>
                 <option value="Սև անգղ" data-icon="https://img.icons8.com/?size=100&id=8yNTuqy4EpaK&format=png&color=000000" data-desc="Մեր լեռներում սավառնող հսկա սև գիշատիչ թռչուն։">🦅 Սև անգղ</option>
             </optgroup>
@@ -229,8 +276,14 @@
 </div>
 
 <script>
+    // Քարտեզի սկզբնավորում
     const map = L.map('map', { zoomSnap: 0.1 }).setView([40.18, 44.5], 8);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+    // OpenStreetMap տախտակները (անվճար և կայուն)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
 
     const drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
@@ -299,7 +352,7 @@
         renderMyMapsList();
     }
 
-    // JWT տոկենի կոդազերծում (բրաուզերի ներսում)
+    // JWT տոկենի կոդազերծում
     function decodeJwt(token) {
         var base64Url = token.split('.')[1];
         var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -313,13 +366,11 @@
         document.getElementById('mapHeaderTitle').innerText = val.trim() || "ՀՀ Միասնական Քարտեզ";
     }
 
-    // Իրավունքների և հեղինակայնության ստուգում (Strict Permissions)
+    // Իրավունքների և հեղինակայնության ստուգում
     let isDrawControlActive = true;
     function checkPermissions() {
-        // Խմբագրման իրավունք կա ՄԻԱՅՆ եթե օգտատերը մուտք է գործել AND (քարտեզը չունի հեղինակ/հին հյուր է OR ընթացիկ օգտատերն է հեղինակը)
         const isEditable = currentUserEmail && (!loadedMapAuthor || loadedMapAuthor === "Guest" || loadedMapAuthor === currentUserEmail);
         
-        // Կառավարում ենք Leaflet Draw գործիքների տեսանելիությունը
         if (!isEditable) {
             if (isDrawControlActive) {
                 map.removeControl(drawControl);
@@ -332,9 +383,7 @@
             }
         }
 
-        // Կառավարում ենք սայդբարի տարրերի տեսանելիությունը ըստ ավտորիզացիայի վիճակի
         if (!currentUserEmail) {
-            // ԱՌԱՆՑ ՄՈՒՏՔ ԳՈՐԾԵԼՈՒ -> Թաքցնել ամբողջը, բացի Լեգենդից և Վերնագրից (Դիտորդի մաքուր ռեժիմ)
             document.getElementById('titleGroupSection').style.display = 'none';
             document.getElementById('myMapsGroupSection').style.display = 'none';
             document.getElementById('shareGroupSection').style.display = 'none';
@@ -344,7 +393,6 @@
             document.getElementById('landscapeGroupSection').style.display = 'none';
             document.getElementById('colorGroupSection').style.display = 'none';
         } else if (!isEditable) {
-            // ՄՈՒՏՔ ԳՈՐԾԱԾ Է, ԲԱՅՑ ՈՒՐԻՇԻ ՔԱՐՏԵԶՆ Է -> Թույլ տալ տեսնել միայն սեփական ցուցակը, թաքցնել ընտրացանկերն ու սեյվը
             document.getElementById('titleGroupSection').style.display = 'none';
             document.getElementById('myMapsGroupSection').style.display = 'block'; 
             document.getElementById('shareGroupSection').style.display = 'none'; 
@@ -354,7 +402,6 @@
             document.getElementById('landscapeGroupSection').style.display = 'none';
             document.getElementById('colorGroupSection').style.display = 'none';
         } else {
-            // ԼԻԱՐԺԵՔ ՀԵՂԻՆԱԿ -> Ցուցադրել բոլոր գործիքներն ու դաշտերը
             document.getElementById('titleGroupSection').style.display = 'block';
             document.getElementById('myMapsGroupSection').style.display = 'block';
             document.getElementById('shareGroupSection').style.display = 'block';
@@ -365,13 +412,11 @@
             document.getElementById('colorGroupSection').style.display = 'block';
         }
 
-        // Թարմացնում ենք քարտեզի բոլոր օբյեկտների Popup-ների ներքին վիճակը
         drawnItems.eachLayer(layer => {
             updatePopup(layer);
         });
     }
 
-    // ➕ Ստեղծել նոր մաքուր քարտեզ
     function createNewMap() {
         if (drawnItems.getLayers().length > 0) {
             if (confirm('Բացել նոր մաքուր քարտե՞զ։ Համոզվեք, որ պահպանել եք ընթացիկ աշխատանքը։')) {
@@ -384,7 +429,6 @@
         }
     }
 
-    // Լոկալ հիշողության մեջ քարտեզների ցուցակի պահպանում
     function saveToLocalStorageList(title, hash) {
         let list = JSON.parse(localStorage.getItem('hh_maps_storage')) || [];
         const existingIndex = list.findIndex(m => m.hash === hash);
@@ -404,7 +448,6 @@
         renderMyMapsList();
     }
 
-    // Իմ քարտեզները պանելի վիզուալիզացիա
     function renderMyMapsList() {
         const container = document.getElementById('myMapsList');
         container.innerHTML = '';
@@ -482,7 +525,7 @@
         html += `</optgroup>`;
         
         const landscapeSelect = document.getElementById('landscapeSelector');
-        html += `<optgroup label="🏞️ ՀՀ վերընթաց լանդշաֆտներ">`;
+        html += `<optgroup label="🏞️️ ՀՀ վերընթաց լանդշաֆտներ">`;
         for(let i = 1; i < landscapeSelect.options.length; i++) {
             let opt = landscapeSelect.options[i];
             html += `<option value="${opt.value}" data-icon="${opt.getAttribute('data-icon')}">${opt.text}</option>`;
@@ -616,14 +659,11 @@
     function attachLayerClickEvent(layer) {
         const id = drawnItems.getLayerId(layer);
 
-        // Ձախ քլիքի իրադարձություն
         layer.on('click', function(e) {
             activateHighlight('id', id);
         });
 
-        // Աջ քլիքի իրադարձություն (contextmenu)
         layer.on('contextmenu', function(e) {
-            // Արգելում ենք խմբագրումը, եթե օգտատերը չունի լիազորություն (հյուր է կամ ուրիշի քարտեզն է)
             const isEditable = currentUserEmail && (!loadedMapAuthor || loadedMapAuthor === "Guest" || loadedMapAuthor === currentUserEmail);
             if (!isEditable) return;
 
@@ -786,7 +826,6 @@
         let descriptionHtml = layer.options.description ? 
             `<span style="font-size:12px; color:#555; max-height:80px; overflow-y:auto; display:block; margin-bottom:4px;">${layer.options.description}</span>` : '';
 
-        // Խմբագրման իրավունքի ստուգում Popup-ի կոճակների համար
         const isEditable = currentUserEmail && (!loadedMapAuthor || loadedMapAuthor === "Guest" || loadedMapAuthor === currentUserEmail);
         let actionButtonsHtml = '';
         if (isEditable) {
@@ -841,7 +880,6 @@
             content.className = 'category-content';
             header.onclick = () => {
                 content.classList.toggle('open');
-                header.querySelector('.arrow').classList.toggle('open');
             };
 
             const groupsByTitle = {};
@@ -943,7 +981,7 @@
     function loadMapFromURL() {
         const hash = window.location.hash.substring(1);
         if (!hash) {
-            checkPermissions(); // Կարգավորում է սկզբնական վիճակը առանց լոգինի
+            checkPermissions(); 
             renderMyMapsList();
             return;
         }
@@ -1011,7 +1049,6 @@
             rectangle: true, marker: true, polyline: true, circle: false, circlemarker: false 
         }
     });
-    // Գործիքի սկզբնական ավելացումը կառավարվում է checkPermissions-ով
 
     map.on(L.Draw.Event.CREATED, function (e) {
         let layer = e.layer;
@@ -1052,7 +1089,7 @@
             selectedOption = landscapeSelect.options[landscapeSelect.selectedIndex];
             categoryName = "🏞️ ՀՀ վերընթաց լանդշաֆտները";
             resourceName = selectedOption.value;
-            resourceIcon = selectedOption.getAttribute('data-icon') || "🏞️";
+            resourceIcon = selectedOption.getAttribute('data-icon') || "🏞️️";
         }
 
         if (resourceName === "") {
@@ -1125,7 +1162,11 @@
     map.on(L.Draw.Event.EDITED, updateLegend);
     map.on(L.Draw.Event.DELETED, updateLegend);
 
-    window.onload = loadMapFromURL;
+    window.onload = function() {
+        loadMapFromURL();
+        // Ապահովում է քարտեզի ճիշտ չափերով արտապատկերումը բեռնումից հետո
+        setTimeout(() => { map.invalidateSize(); }, 200);
+    };
 </script>
 
 </body>
